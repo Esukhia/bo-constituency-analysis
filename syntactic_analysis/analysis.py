@@ -1,15 +1,15 @@
 import csv
 from pathlib import Path
-import json
-import re
+from nltk.tree import Tree
 
 
 def analyze_constituency(raw_rows):
     rows = list(csv.reader(raw_rows))
     rows = strip_empty_rows(rows)
     raw_tree, raw_versions = parse_rows(rows)
-    tree = parse_tree(raw_tree, raw_versions[0])
-    print()
+    mshang, tree = parse_tree(raw_tree, raw_versions[0])
+    rules = [str(r) for r in tree.productions() if "'" not in str(r)]
+    return mshang, rules
 
 
 def parse_tree(raw_tree, words):
@@ -47,29 +47,11 @@ def parse_tree(raw_tree, words):
             if not cell.startswith('['):
                 tree[n][m] = '[' + tree[n][m] + ']'
 
-    print()
-    to_parse = ' '.join([' '.join(col) for col in tree])
-    mshang = 'http://mshang.ca/syntree/?i=' + to_parse.replace('-', '').replace('_', ' ').replace(' ', '%20')
+    to_parse = ' '.join([' '.join(col) for col in tree]).replace('-', '')
 
-    # list structure
-    to_parse = re.sub(r'([^\[\] ]+)', r'"\1"', to_parse)
-    to_parse = to_parse.replace('" "', '", "')
-    to_parse = to_parse.replace(' [', ', [')
-    struct = json.loads(to_parse)
-
-    # to trie structure
-    # get max level:
-    depth = 0
-    for col in tree:
-        depth = len(col) + 1 if depth < len(col) + 1 else depth
-
-
-    tree_struct = {}
-
-    print()
-
-
-
+    mshang = 'http://mshang.ca/syntree/?i=' + to_parse.replace('_', ' ').replace(' ', '%20')
+    tree = Tree.fromstring(to_parse.replace('[', '(').replace(']', ')'))
+    return mshang, tree
 
 
 def strip_empty_rows(rows):
@@ -134,4 +116,6 @@ def parse_rows(rows):
 if __name__ == '__main__':
     in_file = '../tests/input/test_processed.csv'
     content = Path(in_file).read_text().split('\n')
-    analyze_constituency(content)
+    mshang, rules = analyze_constituency(content)
+    rules = '\n'.join(rules)
+    Path('../tests/output/test_processed.txt').write_text(f'{mshang}\n\n{rules}')

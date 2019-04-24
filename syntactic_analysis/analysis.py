@@ -14,11 +14,12 @@ def analyze_constituency(raw_rows):
     rules = [str(r) for r in tree.productions() if "'" not in str(r)]
     vocab = [str(r) for r in tree.productions() if "'" in str(r)]
     extra_rules = []
-    for t in version_trees:
+    for n, t in enumerate(version_trees):
         for rule in t.productions():
             str_rule = str(rule)
+            str_rule = str_rule.replace('--extra' + str(n + 1), '')
             if "'" not in str_rule and str_rule not in rules and str_rule not in extra_rules:
-                extra_rules.append(str(rule))
+                extra_rules.append(str_rule)
 
     rules = '\n'.join(rules)
     extra_rules = '\n'.join(extra_rules)
@@ -74,14 +75,15 @@ def parse_tree(raw_tree, words):
 
 def generate_mshang_link(tree):
     str_tree = re.sub(r'\s+', ' ', str(tree).replace('\n', ''))
-    str_tree = str_tree.replace('[', '(').replace(']', ')')
+    str_tree = str_tree.replace('(', '[').replace(')', ']')
     return 'http://mshang.ca/syntree/?i=' + str_tree.replace('_', ' ').replace(' ', '%20')
 
 
 def generate_subtrees(simplified_sentences, full_tree):
     subtrees = []
-    for sent in reversed(simplified_sentences):
+    for n, sent in enumerate(simplified_sentences):
         new_tree = full_tree.copy(deep=True)
+        new_tree.set_label(f'{new_tree.label()}--extra{n}')
         # delete leafs
         to_del = list(reversed([num for num, word in enumerate(sent) if not word]))
         if not to_del:

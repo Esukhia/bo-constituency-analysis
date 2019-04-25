@@ -6,7 +6,7 @@ from syntactic_analysis.analysis import check_tree
 
 def test_parsed_sentences():
     in_file = 'input/test_processed.csv'
-    content = Path(in_file).read_text().split('\n')
+    content = Path(in_file).read_text()
     output = analyze_constituency(content)
     Path('output/test_processed.txt').write_text(output)
 

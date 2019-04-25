@@ -5,8 +5,8 @@ import re
 from nltk.tree import ParentedTree
 
 
-def analyze_constituency(raw_rows):
-    rows = list(csv.reader(raw_rows))
+def analyze_constituency(raw_content):
+    rows = list(csv.reader(raw_content.split('\n')))
     rows = strip_empty_rows(rows)
     raw_tree, raw_versions = parse_rows(rows)
     tree = parse_tree(raw_tree, raw_versions[0])
@@ -171,3 +171,37 @@ class BoTree(ParentedTree):
 
         svg = TreePrettyPrinter(self, sentence, highlight).svg()
         Path(out_file).write_text(svg)
+
+    def print_latex(self):
+        qtree = self.pformat_latex_qtree()
+        qtree = re.sub(r'([^a-zA-Z\[\].\s\\_]+)', r'\\bo{\1}', qtree)
+        header = """\\documentclass{article}
+\\usepackage{polyglossia}
+\\usepackage{fontspec} 
+\\usepackage{tikz-qtree}
+
+\\newfontfamily\\tibetanfont{[Monlam_Uni_OuChan2.ttf]}
+\\newcommand{\\bo}[1]{\\tibetanfont{#1}}
+
+\\begin{document}
+
+\\hoffset=-1in
+\\voffset=-1in
+\\setbox0\hbox{
+"""
+        footer = """
+        }
+\\pdfpageheight=\\dimexpr\\ht0+\\dp0\\relax
+\\pdfpagewidth=\\wd0
+\\shipout\\box0
+
+
+\\stop"""
+        document = header + qtree + footer
+        document = document.replace('\\', '\\')
+        from pylatex import Document
+        doc = Document('basic')
+        doc.escape = False
+        doc.append(document)
+        doc.generate_pdf('out.pdf')
+        return

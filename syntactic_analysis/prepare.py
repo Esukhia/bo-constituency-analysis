@@ -5,12 +5,6 @@ from pybo import BoPipeline, BoTokenizer
 
 from .textunits import sentencify
 
-tok = BoTokenizer('GMD')
-
-
-def tokenize(string):
-    return tok.tokenize(string)
-
 
 def prepare_analysis(sentences):
     LINES = 10  # amount of copies of the sentence for the simplification
@@ -39,9 +33,11 @@ def extract_words_n_pos(sent):
 
 
 def prepare_file(in_file, out_dir):
+    tok = BoTokenizer('GMD')
+
     in_file, out_dir = Path(in_file), Path(out_dir)
     pipeline = BoPipeline('dummy',
-                          tokenize,
+                          tok.tokenize,
                           sentencify,
                           prepare_analysis)
 

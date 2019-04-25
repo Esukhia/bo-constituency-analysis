@@ -6,7 +6,7 @@ from nltk.tree import ParentedTree
 
 
 def analyze_constituency(raw_content):
-    rows = list(csv.reader(raw_content.split('\n')))
+    rows = list(csv.reader(raw_content.split('\n'), delimiter='\t'))
     rows = strip_empty_rows(rows)
     raw_tree, raw_versions = parse_rows(rows)
     tree = parse_tree(raw_tree, raw_versions[0])

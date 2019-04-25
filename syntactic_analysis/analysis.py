@@ -1,8 +1,10 @@
 import csv
-from pathlib import Path
+from html import escape
+from collections import defaultdict
 import re
 
-from nltk.tree import ParentedTree
+from nltk.tree import ParentedTree, Tree
+from nltk.treeprettyprinter import TreePrettyPrinter
 
 
 def analyze_constituency(raw_content):
@@ -30,6 +32,15 @@ def analyze_constituency(raw_content):
     vocab = '\n'.join(vocab)
 
     return f'{mshang_tree}\n\nextra trees:\n{mshang_extra}\n\nrules:\n{rules}\n\nextra rules:\n{extra_rules}\n\nvocab:\n{vocab}'
+
+
+def generate_trees(raw_content):
+    rows = list(csv.reader(raw_content.split('\n'), delimiter='\t'))
+    rows = strip_empty_rows(rows)
+    raw_tree, raw_versions = parse_rows(rows)
+    tree = parse_tree(raw_tree, raw_versions[0])
+    version_trees = generate_subtrees(raw_versions, tree)
+    return tree, version_trees
 
 
 def parse_tree(raw_tree, words):
@@ -80,9 +91,10 @@ def generate_mshang_link(tree):
 
 
 def generate_subtrees(simplified_sentences, full_tree):
+    parented_tree = ParentedTree(0, []).convert(full_tree)
     subtrees = []
     for n, sent in enumerate(simplified_sentences):
-        new_tree = full_tree.copy(deep=True)
+        new_tree = parented_tree.copy(deep=True)
         new_tree.set_label(f'{new_tree.label()}--extra{n}')
         # delete leafs
         to_del = list(reversed([num for num, word in enumerate(sent) if not word]))
@@ -96,7 +108,7 @@ def generate_subtrees(simplified_sentences, full_tree):
 
             del new_tree[postn[:-1]]
 
-        subtrees.append(new_tree)
+        subtrees.append(BoTree(0, []).convert(new_tree))
 
     return subtrees
 
@@ -160,17 +172,109 @@ def parse_rows(rows):
     return rows[:p + 1], rows[w:]
 
 
-class BoTree(ParentedTree):
-    def print_svg(self, sentence=None, highlight=(), out_file='out.svg'):
+class BoTreePrettyPrinter(TreePrettyPrinter):
+    def svg(self, nodecolor='blue', leafcolor='red', funccolor='green', font='Noto Sans Tibetan'):
+        """
+        :return: SVG representation of a tree.
+        """
+        fontsize = 12
+        hscale = 40
+        vscale = 25
+        hstart = vstart = 20
+        width = max(col for _, col in self.coords.values())
+        height = max(row for row, _ in self.coords.values())
+        result = [
+            '<svg version="1.1" xmlns="http://www.w3.org/2000/svg" '
+            'width="%dem" height="%dem" viewBox="%d %d %d %d">'
+            % (
+                width * 3,
+                height * 2.5,
+                -hstart,
+                -vstart,
+                width * hscale + 3 * hstart,
+                height * vscale + 3 * vstart,
+            )
+        ]
+
+        children = defaultdict(set)
+        for n in self.nodes:
+            if n:
+                children[self.edges[n]].add(n)
+
+        # horizontal branches from nodes to children
+        for node in self.nodes:
+            if not children[node]:
+                continue
+            y, x = self.coords[node]
+            x *= hscale
+            y *= vscale
+            x += hstart
+            y += vstart + fontsize // 2
+            childx = [self.coords[c][1] for c in children[node]]
+            xmin = hstart + hscale * min(childx)
+            xmax = hstart + hscale * max(childx)
+            result.append(
+                '\t<polyline style="stroke:black; stroke-width:1; fill:none;" '
+                'points="%g,%g %g,%g" />' % (xmin, y, xmax, y)
+            )
+            result.append(
+                '\t<polyline style="stroke:black; stroke-width:1; fill:none;" '
+                'points="%g,%g %g,%g" />' % (x, y, x, y - fontsize // 3)
+            )
+
+        # vertical branches from children to parents
+        for child, parent in self.edges.items():
+            y, _ = self.coords[parent]
+            y *= vscale
+            y += vstart + fontsize // 2
+            childy, childx = self.coords[child]
+            childx *= hscale
+            childy *= vscale
+            childx += hstart
+            childy += vstart - fontsize
+            result += [
+                '\t<polyline style="stroke:white; stroke-width:10; fill:none;"'
+                ' points="%g,%g %g,%g" />' % (childx, childy, childx, y + 5),
+                '\t<polyline style="stroke:black; stroke-width:1; fill:none;"'
+                ' points="%g,%g %g,%g" />' % (childx, childy, childx, y),
+            ]
+
+        # write nodes with coordinates
+        for n, (row, column) in self.coords.items():
+            node = self.nodes[n]
+            x = column * hscale + hstart
+            y = row * vscale + vstart
+            if n in self.highlight:
+                color = nodecolor if isinstance(node, Tree) else leafcolor
+                if isinstance(node, Tree) and node.label().startswith('-'):
+                    color = funccolor
+            else:
+                color = 'black'
+            result += [
+                '\t<text style="text-anchor: middle; fill: %s; '
+                'font-size: %dpx; font-family: %s" x="%g" y="%g">%s</text>'
+                % (
+                    color,
+                    fontsize,
+                    font,
+                    x,
+                    y,
+                    escape(node.label() if isinstance(node, Tree) else node),
+                )
+            ]
+
+        result += ['</svg>']
+        return '\n'.join(result)
+
+
+class BoTree(Tree):
+    def print_svg(self, sentence=None, highlight=()):
         """
         Pretty-print this tree as .svg
         For explanation of the arguments, see the documentation for
         `nltk.treeprettyprinter.TreePrettyPrinter`.
         """
-        from nltk.treeprettyprinter import TreePrettyPrinter
-
-        svg = TreePrettyPrinter(self, sentence, highlight).svg()
-        Path(out_file).write_text(svg)
+        return BoTreePrettyPrinter(self, sentence, highlight).svg()
 
     def print_latex(self):
         qtree = self.pformat_latex_qtree()
@@ -199,9 +303,4 @@ class BoTree(ParentedTree):
 \\stop"""
         document = header + qtree + footer
         document = document.replace('\\', '\\')
-        from pylatex import Document
-        doc = Document('basic')
-        doc.escape = False
-        doc.append(document)
-        doc.generate_pdf('out.pdf')
-        return
+        return document

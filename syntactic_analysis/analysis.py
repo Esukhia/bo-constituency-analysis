@@ -27,7 +27,7 @@ def analyze_constituency(raw_content):
     extra_rules = '\n'.join(extra_rules)
 
     mshang_tree = generate_mshang_link(tree)
-    mshang_extra = '\n'.join([generate_mshang_link(t) for t in version_trees])
+    mshang_extra = '\n\n'.join([generate_mshang_link(t) for t in version_trees])
 
     vocab = '\n'.join(vocab)
 

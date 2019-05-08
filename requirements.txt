@@ -1,0 +1,6 @@
+pybo==0.4.2
+future==0.17.1
+nltk==3.4.1
+data==0.4
+pdf2image==1.5.4
+tempdir==0.7.1

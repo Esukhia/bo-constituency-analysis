@@ -9,7 +9,7 @@ from nltk.tree import ParentedTree, Tree
 from nltk.treeprettyprinter import TreePrettyPrinter
 
 
-def dir_analyze_constituency(in_dir, out_dir, format='png', write_all=True, mshang=False):
+def dir_analyze_constituency(in_dir, out_dir, format='png', write_all=True, mshang=False, align_leafs=True, draw_square=False):
     # ensure the in and out folders exist
     if not in_dir.is_dir():
         in_dir.mkdir(exist_ok=True)
@@ -22,18 +22,22 @@ def dir_analyze_constituency(in_dir, out_dir, format='png', write_all=True, msha
 
         # analyse
         tree, version_trees, output = analyze_constituency(content, mshang=mshang)
+        if align_leafs:
+            from_roof = tree.height() * 25
+        else:
+            from_roof = None
 
         if format == 'png':
-            tree.build_png(Path(out_dir / f'{csv.stem}.png'))
+            tree.build_png(Path(out_dir / f'{csv.stem}.png'), from_roof=from_roof, draw_square=draw_square)
             if write_all:
                 for num, v in enumerate(version_trees):
-                    v.build_png(Path(out_dir / f'{csv.stem}_version{num + 1}.png'))
+                    v.build_png(Path(out_dir / f'{csv.stem}_version{num + 1}.png'), from_roof=from_roof, draw_square=draw_square)
 
         elif format == 'pdf':
-            tree.build_pdf(Path(out_dir / f'{csv.stem}.pdf'))
+            tree.build_pdf(Path(out_dir / f'{csv.stem}.pdf'), from_roof=from_roof, draw_square=draw_square)
             if write_all:
                 for num, v in enumerate(version_trees):
-                    v.build_pdf(Path(out_dir / f'{csv.stem}_version{num + 1}.pdf'))
+                    v.build_pdf(Path(out_dir / f'{csv.stem}_version{num + 1}.pdf'), from_roof=from_roof, draw_square=draw_square)
         else:
             raise SyntaxError('only png and pdf are allowed as formats')
 
@@ -315,7 +319,7 @@ class BoTree(Tree):
         """
         return BoTreePrettyPrinter(self, sentence, highlight).svg()
 
-    def print_latex(self):
+    def print_latex(self, from_roof=None, draw_square=False):
         qtree = self.pformat_latex_qtree()
         qtree = re.sub(r'([^a-zA-Z\[\].\s\\_]+)', r'\\bo{\1}', qtree)
         header1 = """\\documentclass{article}
@@ -325,7 +329,7 @@ class BoTree(Tree):
 
 \\newfontfamily\\monlam[Path = """
 
-        header2 = str(Path(__file__).parent) + """/fonts/]{monlam_uni_ouchan2.ttf}
+        header2 = """/fonts/]{monlam_uni_ouchan2.ttf}
 \\newcommand{\\bo}[1]{\\monlam{#1}}
 
 \\begin{document}
@@ -333,8 +337,10 @@ class BoTree(Tree):
 \\hoffset=-1in
 \\voffset=-1in
 \\setbox0\hbox{
+\\begin{tikzpicture}
 """
         footer = """
+\\end{tikzpicture}
         }
 \\pdfpageheight=\\dimexpr\\ht0+\\dp0\\relax
 \\pdfpagewidth=\\wd0
@@ -342,19 +348,29 @@ class BoTree(Tree):
 
 
 \\stop"""
-        document = header1 + header2 + qtree + footer
+        square = """\\tikzset{edge from parent/.style=
+{draw,
+edge from parent path={(\\tikzparentnode.south)
+-- +(0,-8pt)
+-| (\\tikzchildnode)}}}"""
+
+        if from_roof:
+            header2 += '\\tikzset{frontier/.style={distance from root=' + str(from_roof) + 'pt}}\n'
+        if draw_square:
+            header2 += square
+        document = header1 + str(Path(__file__).parent) + header2 + qtree + footer
         document = document.replace('\\', '\\')
         return document
 
-    def build_pdf(self, filename, texinputs=[]):
-        source = self.print_latex()
+    def build_pdf(self, filename, texinputs=[], from_roof=None, draw_square=False):
+        source = self.print_latex(from_roof=from_roof, draw_square=draw_square)
         bld_cls = lambda: LatexMkBuilder()
         builder = bld_cls()
         pdf = builder.build_pdf(source, texinputs)
         pdf.save_to(filename)
 
-    def build_png(self, filename):
-        source = self.print_latex()
+    def build_png(self, filename, from_roof=None, draw_square=False):
+        source = self.print_latex(from_roof=from_roof, draw_square=draw_square)
         bld_cls = lambda: LatexMkBuilder()
         builder = bld_cls()
         pdf = builder.build_pdf(source, [])

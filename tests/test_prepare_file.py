@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from syntactic_analysis import prepare_file, analyze_constituency
+from syntactic_analysis import analyze_constituency
 from syntactic_analysis.analysis import check_tree
 
 

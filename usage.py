@@ -18,9 +18,9 @@ def main(in_dir, out_dir, write_pdfs=True):
         tree, version_trees, output = analyze_constituency(content)
 
         if write_pdfs:
-            tree.build_pdf(Path(out_dir / f'{csv.stem}.pdf'))
+            tree.build_png(Path(out_dir / f'{csv.stem}.png'))
             for num, v in enumerate(version_trees):
-                v.build_pdf(Path(out_dir / f'{csv.stem}_version{num+1}.pdf'))
+                v.build_png(Path(out_dir / f'{csv.stem}_version{num+1}.png'))
 
         # write the output
         out_file = out_dir / (csv.stem + '.txt')

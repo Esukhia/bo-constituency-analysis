@@ -4,6 +4,7 @@ from collections import defaultdict
 import re
 from .latex import LatexMkBuilder
 from pathlib import Path
+from pdf2image import convert_from_bytes
 
 from nltk.tree import ParentedTree, Tree
 from nltk.treeprettyprinter import TreePrettyPrinter
@@ -316,3 +317,11 @@ class BoTree(Tree):
         builder = bld_cls()
         pdf = builder.build_pdf(source, texinputs)
         pdf.save_to(filename)
+
+    def build_png(self, filename):
+        source = self.print_latex()
+        bld_cls = lambda: LatexMkBuilder()
+        builder = bld_cls()
+        pdf = builder.build_pdf(source, [])
+        png = convert_from_bytes(bytes(pdf), fmt='png')[0]
+        png.save(filename)

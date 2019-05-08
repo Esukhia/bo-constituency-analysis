@@ -3,7 +3,7 @@ from html import escape
 from collections import defaultdict
 import re
 from .latex import LatexMkBuilder
-
+from pathlib import Path
 
 from nltk.tree import ParentedTree, Tree
 from nltk.treeprettyprinter import TreePrettyPrinter
@@ -282,13 +282,15 @@ class BoTree(Tree):
     def print_latex(self):
         qtree = self.pformat_latex_qtree()
         qtree = re.sub(r'([^a-zA-Z\[\].\s\\_]+)', r'\\bo{\1}', qtree)
-        header = """\\documentclass{article}
+        header1 = """\\documentclass{article}
 \\usepackage{polyglossia}
 \\usepackage{fontspec} 
 \\usepackage{tikz-qtree}
 
-\\newfontfamily\\tibetanfont{[NotoSansTibetan-Regular.ttf]}
-\\newcommand{\\bo}[1]{\\tibetanfont{#1}}
+\\newfontfamily\\monlam[Path = """
+
+        header2 = str(Path(__file__).parent) + """/fonts/]{monlam_uni_ouchan2.ttf}
+\\newcommand{\\bo}[1]{\\monlam{#1}}
 
 \\begin{document}
 
@@ -304,7 +306,7 @@ class BoTree(Tree):
 
 
 \\stop"""
-        document = header + qtree + footer
+        document = header1 + header2 + qtree + footer
         document = document.replace('\\', '\\')
         return document
 

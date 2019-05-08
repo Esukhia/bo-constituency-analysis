@@ -2,6 +2,8 @@ import csv
 from html import escape
 from collections import defaultdict
 import re
+from .latex import LatexMkBuilder
+
 
 from nltk.tree import ParentedTree, Tree
 from nltk.treeprettyprinter import TreePrettyPrinter
@@ -30,8 +32,9 @@ def analyze_constituency(raw_content):
     mshang_extra = '\n\n'.join([generate_mshang_link(t) for t in version_trees])
 
     vocab = '\n'.join(vocab)
+    report = f'{mshang_tree}\n\nextra trees:\n{mshang_extra}\n\nrules:\n{rules}\n\nextra rules:\n{extra_rules}\n\nvocab:\n{vocab}'
 
-    return f'{mshang_tree}\n\nextra trees:\n{mshang_extra}\n\nrules:\n{rules}\n\nextra rules:\n{extra_rules}\n\nvocab:\n{vocab}'
+    return tree, version_trees, report
 
 
 def generate_trees(raw_content):
@@ -284,7 +287,7 @@ class BoTree(Tree):
 \\usepackage{fontspec} 
 \\usepackage{tikz-qtree}
 
-\\newfontfamily\\tibetanfont{[Monlam_Uni_OuChan2.ttf]}
+\\newfontfamily\\tibetanfont{[NotoSansTibetan-Regular.ttf]}
 \\newcommand{\\bo}[1]{\\tibetanfont{#1}}
 
 \\begin{document}
@@ -304,3 +307,10 @@ class BoTree(Tree):
         document = header + qtree + footer
         document = document.replace('\\', '\\')
         return document
+
+    def build_pdf(self, filename, texinputs=[]):
+        source = self.print_latex()
+        bld_cls = lambda: LatexMkBuilder()
+        builder = bld_cls()
+        pdf = builder.build_pdf(source, texinputs)
+        pdf.save_to(filename)

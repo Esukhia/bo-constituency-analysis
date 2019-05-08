@@ -7,7 +7,7 @@ from syntactic_analysis.analysis import check_tree
 def test_parsed_sentences():
     in_file = 'input/test_processed.tsv'
     content = Path(in_file).read_text()
-    output = analyze_constituency(content)
+    tree, version_trees, output = analyze_constituency(content)
     Path('output/test_processed.txt').write_text(output)
 
 

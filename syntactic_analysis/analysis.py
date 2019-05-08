@@ -5,12 +5,44 @@ import re
 from .latex import LatexMkBuilder
 from pathlib import Path
 from pdf2image import convert_from_bytes
-
 from nltk.tree import ParentedTree, Tree
 from nltk.treeprettyprinter import TreePrettyPrinter
 
 
-def analyze_constituency(raw_content):
+def dir_analyze_constituency(in_dir, out_dir, format='png', write_all=True, mshang=False):
+    # ensure the in and out folders exist
+    if not in_dir.is_dir():
+        in_dir.mkdir(exist_ok=True)
+    if not out_dir.is_dir():
+        out_dir.mkdir(exist_ok=True)
+
+    for csv in in_dir.glob('*.tsv'):
+        # read the tsv file in a single block
+        content = csv.read_text(encoding='utf-8-sig')
+
+        # analyse
+        tree, version_trees, output = analyze_constituency(content, mshang=mshang)
+
+        if format == 'png':
+            tree.build_png(Path(out_dir / f'{csv.stem}.png'))
+            if write_all:
+                for num, v in enumerate(version_trees):
+                    v.build_png(Path(out_dir / f'{csv.stem}_version{num + 1}.png'))
+
+        elif format == 'pdf':
+            tree.build_pdf(Path(out_dir / f'{csv.stem}.pdf'))
+            if write_all:
+                for num, v in enumerate(version_trees):
+                    v.build_pdf(Path(out_dir / f'{csv.stem}_version{num + 1}.pdf'))
+        else:
+            raise SyntaxError('only png and pdf are allowed as formats')
+
+        # write the report
+        out_file = out_dir / (csv.stem + '.txt')
+        out_file.write_text(output, encoding='utf-8-sig')
+
+
+def analyze_constituency(raw_content, mshang=True):
     rows = list(csv.reader(raw_content.split('\n'), delimiter='\t'))
     rows = strip_empty_rows(rows)
     raw_tree, raw_versions = parse_rows(rows)
@@ -33,7 +65,10 @@ def analyze_constituency(raw_content):
     mshang_extra = '\n\n'.join([generate_mshang_link(t) for t in version_trees])
 
     vocab = '\n'.join(vocab)
-    report = f'{mshang_tree}\n\nextra trees:\n{mshang_extra}\n\nrules:\n{rules}\n\nextra rules:\n{extra_rules}\n\nvocab:\n{vocab}'
+    if mshang:
+        report = f'{mshang_tree}\n\nextra trees:\n{mshang_extra}\n\nrules:\n{rules}\n\nextra rules:\n{extra_rules}\n\nvocab:\n{vocab}'
+    else:
+        report = f'rules:\n{rules}\n\nextra rules:\n{extra_rules}\n\nvocab:\n{vocab}'
 
     return tree, version_trees, report
 

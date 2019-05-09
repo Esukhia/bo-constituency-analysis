@@ -9,7 +9,7 @@ from nltk.tree import ParentedTree, Tree
 from nltk.treeprettyprinter import TreePrettyPrinter
 
 
-def dir_analyze_constituency(in_dir, out_dir, format='png', write_all=False, align_leafs=True, draw_square=False):
+def dir_analyze_constituency(in_dir, out_dir, format='png', write_all=False, align_leafs=True, draw_square=False, font=None):
     # ensure the in and out folders exist
     if not in_dir.is_dir():
         in_dir.mkdir(exist_ok=True)
@@ -32,24 +32,35 @@ def dir_analyze_constituency(in_dir, out_dir, format='png', write_all=False, ali
 
         # write others
         if format == 'png':
-            tree.build_png(Path(out_dir / f'{csv.stem}.png'), from_roof=from_roof, draw_square=draw_square)
+            tree.build_png(Path(out_dir / f'{csv.stem}.png'),
+                           from_roof=from_roof,
+                           draw_square=draw_square,
+                           font=font)
             if write_all:
                 for num, v in enumerate(version_trees):
-                    v.build_png(Path(out_dir / f'{csv.stem}_version{num + 1}.png'), from_roof=from_roof, draw_square=draw_square)
+                    v.build_png(Path(out_dir / f'{csv.stem}_version{num + 1}.png'),
+                                from_roof=from_roof,
+                                draw_square=draw_square,
+                                font=font)
 
         elif format == 'pdf':
-            tree.build_pdf(Path(out_dir / f'{csv.stem}.pdf'), from_roof=from_roof, draw_square=draw_square)
+            tree.build_pdf(Path(out_dir / f'{csv.stem}.pdf'),
+                           from_roof=from_roof,
+                           draw_square=draw_square,
+                           font=font)
             if write_all:
                 for num, v in enumerate(version_trees):
-                    v.build_pdf(Path(out_dir / f'{csv.stem}_version{num + 1}.pdf'), from_roof=from_roof, draw_square=draw_square)
+                    v.build_pdf(Path(out_dir / f'{csv.stem}_version{num + 1}.pdf'),
+                                from_roof=from_roof,
+                                draw_square=draw_square,
+                                font=font)
 
         elif format == 'svg':
-            with Path(out_dir / f'{csv.stem}.svg').open(encoding='utf-8-sig') as w:
-                w.write(tree.build_svg())
+            Path(out_dir / f'{csv.stem}.svg').write_text(tree.build_svg(font=font), encoding='utf-8-sig')
             if write_all:
                 for num, v in enumerate(version_trees):
-                    with Path(out_dir / f'{csv.stem}_version{num + 1}.svg').open(encoding='utf-8-sig') as w:
-                        w.write(v.build_svg())
+                    Path(out_dir / f'{csv.stem}_version{num + 1}.svg')\
+                        .write_text(v.build_svg(font=font), encoding='utf-8-sig')
 
         elif format == 'latex':
             Path(out_dir / f'{csv.stem}.tex').write_text(tree.gen_latex(from_roof=from_roof, draw_square=draw_square))
@@ -233,10 +244,12 @@ def parse_rows(rows):
 
 
 class BoTreePrettyPrinter(TreePrettyPrinter):
-    def svg(self, nodecolor='blue', leafcolor='red', funccolor='green', font='Noto Sans Tibetan'):
+    def svg(self, nodecolor='blue', leafcolor='red', funccolor='green', font=None):
         """
         :return: SVG representation of a tree.
         """
+        if not font:
+            font = 'Noto Sans Tibetan'
         fontsize = 12
         hscale = 40
         vscale = 25
@@ -328,15 +341,15 @@ class BoTreePrettyPrinter(TreePrettyPrinter):
 
 
 class BoTree(Tree):
-    def build_svg(self, sentence=None, highlight=()):
+    def build_svg(self, sentence=None, highlight=(), font=None):
         """
         Pretty-print this tree as .svg
         For explanation of the arguments, see the documentation for
         `nltk.treeprettyprinter.TreePrettyPrinter`.
         """
-        return BoTreePrettyPrinter(self, sentence, highlight).svg()
+        return BoTreePrettyPrinter(self, sentence, highlight).svg(font=font)
 
-    def gen_latex(self, from_roof=None, draw_square=False):
+    def gen_latex(self, from_roof=None, draw_square=False, font=None):
         qtree = self.pformat_latex_qtree()
         qtree = re.sub(r'([^a-zA-Z\[\].\s\\_]+)', r'\\bo{\1}', qtree)
         header1 = """\\documentclass{article}
@@ -346,7 +359,11 @@ class BoTree(Tree):
 
 \\newfontfamily\\monlam[Path = """
 
-        header2 = """/fonts/]{monlam_uni_ouchan2.ttf}
+        if font:
+            header2 = "/fonts/]{" + font
+        else:
+            header2 = "/fonts/]{monlam_uni_ouchan2.ttf"
+        header2 += """}
 \\newcommand{\\bo}[1]{\\monlam{#1}}
 
 \\begin{document}
@@ -379,15 +396,15 @@ edge from parent path={(\\tikzparentnode.south)
         document = document.replace('\\', '\\')
         return document
 
-    def build_pdf(self, filename, texinputs=[], from_roof=None, draw_square=False):
-        source = self.gen_latex(from_roof=from_roof, draw_square=draw_square)
+    def build_pdf(self, filename, texinputs=[], from_roof=None, draw_square=False, font=None):
+        source = self.gen_latex(from_roof=from_roof, draw_square=draw_square, font=font)
         bld_cls = lambda: LatexMkBuilder()
         builder = bld_cls()
         pdf = builder.build_pdf(source, texinputs)
         pdf.save_to(filename)
 
-    def build_png(self, filename, from_roof=None, draw_square=False):
-        source = self.gen_latex(from_roof=from_roof, draw_square=draw_square)
+    def build_png(self, filename, from_roof=None, draw_square=False, font=None):
+        source = self.gen_latex(from_roof=from_roof, draw_square=draw_square, font=font)
         bld_cls = lambda: LatexMkBuilder()
         builder = bld_cls()
         pdf = builder.build_pdf(source, [])

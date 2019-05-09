@@ -9,7 +9,7 @@ from nltk.tree import ParentedTree, Tree
 from nltk.treeprettyprinter import TreePrettyPrinter
 
 
-def dir_analyze_constituency(in_dir, out_dir, format='png', write_all=True, mshang=False, align_leafs=True, draw_square=False):
+def dir_analyze_constituency(in_dir, out_dir, format='png', write_all=False, align_leafs=True, draw_square=False):
     # ensure the in and out folders exist
     if not in_dir.is_dir():
         in_dir.mkdir(exist_ok=True)
@@ -21,12 +21,16 @@ def dir_analyze_constituency(in_dir, out_dir, format='png', write_all=True, msha
         content = csv.read_text(encoding='utf-8-sig')
 
         # analyse
-        tree, version_trees, output = analyze_constituency(content, mshang=mshang)
+        tree, version_trees, rules = analyze_constituency(content)
         if align_leafs:
             from_roof = tree.height() * 25
         else:
             from_roof = None
 
+        # write rules
+        Path(out_dir / f'{csv.stem}_rules.txt').write_text(rules, encoding='utf-8-sig')
+
+        # write others
         if format == 'png':
             tree.build_png(Path(out_dir / f'{csv.stem}.png'), from_roof=from_roof, draw_square=draw_square)
             if write_all:
@@ -38,15 +42,34 @@ def dir_analyze_constituency(in_dir, out_dir, format='png', write_all=True, msha
             if write_all:
                 for num, v in enumerate(version_trees):
                     v.build_pdf(Path(out_dir / f'{csv.stem}_version{num + 1}.pdf'), from_roof=from_roof, draw_square=draw_square)
+
+        elif format == 'svg':
+            with Path(out_dir / f'{csv.stem}.svg').open(encoding='utf-8-sig') as w:
+                w.write(tree.build_svg())
+            if write_all:
+                for num, v in enumerate(version_trees):
+                    with Path(out_dir / f'{csv.stem}_version{num + 1}.svg').open(encoding='utf-8-sig') as w:
+                        w.write(v.build_svg())
+
+        elif format == 'latex':
+            Path(out_dir / f'{csv.stem}.tex').write_text(tree.gen_latex(from_roof=from_roof, draw_square=draw_square))
+            if write_all:
+                for num, v in enumerate(version_trees):
+                    Path(out_dir / f'{csv.stem}_version{num + 1}.tex')\
+                        .write_text(v.gen_latex(from_roof=from_roof, draw_square=draw_square), encoding='utf-8-sig')
+
+        elif format == 'mshang':
+            mshang = generate_mshang_link(tree)
+            if write_all:
+                mshang += '\n\nextra trees:\n'
+                mshang += '\n\n'.join([generate_mshang_link(t) for t in version_trees])
+            Path(out_dir / f'{csv.stem}_mshang.txt').write_text(mshang, encoding='utf-8-sig')
+
         else:
-            raise SyntaxError('only png and pdf are allowed as formats')
-
-        # write the report
-        out_file = out_dir / (csv.stem + '.txt')
-        out_file.write_text(output, encoding='utf-8-sig')
+            raise SyntaxError('allowed formats are: "png" "pdf" "svg", "latex" and "mshang"')
 
 
-def analyze_constituency(raw_content, mshang=True):
+def analyze_constituency(raw_content):
     rows = list(csv.reader(raw_content.split('\n'), delimiter='\t'))
     rows = strip_empty_rows(rows)
     raw_tree, raw_versions = parse_rows(rows)
@@ -64,17 +87,11 @@ def analyze_constituency(raw_content, mshang=True):
 
     rules = '\n'.join(rules)
     extra_rules = '\n'.join(extra_rules)
-
-    mshang_tree = generate_mshang_link(tree)
-    mshang_extra = '\n\n'.join([generate_mshang_link(t) for t in version_trees])
-
     vocab = '\n'.join(vocab)
-    if mshang:
-        report = f'{mshang_tree}\n\nextra trees:\n{mshang_extra}\n\nrules:\n{rules}\n\nextra rules:\n{extra_rules}\n\nvocab:\n{vocab}'
-    else:
-        report = f'rules:\n{rules}\n\nextra rules:\n{extra_rules}\n\nvocab:\n{vocab}'
 
-    return tree, version_trees, report
+    rules = f'rules:\n{rules}\n\nextra rules:\n{extra_rules}\n\nvocab:\n{vocab}'
+
+    return tree, version_trees, rules
 
 
 def generate_trees(raw_content):
@@ -311,7 +328,7 @@ class BoTreePrettyPrinter(TreePrettyPrinter):
 
 
 class BoTree(Tree):
-    def print_svg(self, sentence=None, highlight=()):
+    def build_svg(self, sentence=None, highlight=()):
         """
         Pretty-print this tree as .svg
         For explanation of the arguments, see the documentation for
@@ -319,7 +336,7 @@ class BoTree(Tree):
         """
         return BoTreePrettyPrinter(self, sentence, highlight).svg()
 
-    def print_latex(self, from_roof=None, draw_square=False):
+    def gen_latex(self, from_roof=None, draw_square=False):
         qtree = self.pformat_latex_qtree()
         qtree = re.sub(r'([^a-zA-Z\[\].\s\\_]+)', r'\\bo{\1}', qtree)
         header1 = """\\documentclass{article}
@@ -363,14 +380,14 @@ edge from parent path={(\\tikzparentnode.south)
         return document
 
     def build_pdf(self, filename, texinputs=[], from_roof=None, draw_square=False):
-        source = self.print_latex(from_roof=from_roof, draw_square=draw_square)
+        source = self.gen_latex(from_roof=from_roof, draw_square=draw_square)
         bld_cls = lambda: LatexMkBuilder()
         builder = bld_cls()
         pdf = builder.build_pdf(source, texinputs)
         pdf.save_to(filename)
 
     def build_png(self, filename, from_roof=None, draw_square=False):
-        source = self.print_latex(from_roof=from_roof, draw_square=draw_square)
+        source = self.gen_latex(from_roof=from_roof, draw_square=draw_square)
         bld_cls = lambda: LatexMkBuilder()
         builder = bld_cls()
         pdf = builder.build_pdf(source, [])

@@ -1,13 +1,13 @@
 from pathlib import Path
 
-from syntactic_analysis import analyze_constituency
+from syntactic_analysis import generate_analysis
 from syntactic_analysis.analysis import check_tree
 
 
 def test_parsed_sentences():
     in_file = 'input/test_processed.tsv'
     content = Path(in_file).read_text()
-    tree, version_trees, output = analyze_constituency(content)
+    tree, version_trees, output = generate_analysis(content)
     Path('output/test_processed.txt').write_text(output)
 
 

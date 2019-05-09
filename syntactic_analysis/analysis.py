@@ -2,85 +2,154 @@ import csv
 from html import escape
 from collections import defaultdict
 import re
-from .latex import LatexMkBuilder
 from pathlib import Path
+from tempdir import TempDir
+
+import xlrd
 from pdf2image import convert_from_bytes
 from nltk.tree import ParentedTree, Tree
 from nltk.treeprettyprinter import TreePrettyPrinter
 
+from .latex import LatexMkBuilder
 
-def dir_analyze_constituency(in_dir, out_dir, format='png', write_all=False, align_leafs=True, draw_square=False, font=None):
+
+def analyze_constituency(in_dir, out_dir, format='png', write_all=False, align_leafs=True, draw_square=False, font=None, header_sheets=0):
     # ensure the in and out folders exist
     if not in_dir.is_dir():
         in_dir.mkdir(exist_ok=True)
     if not out_dir.is_dir():
         out_dir.mkdir(exist_ok=True)
 
-    for csv in in_dir.glob('*.tsv'):
-        # read the tsv file in a single block
-        content = csv.read_text(encoding='utf-8-sig')
+    # process all tsv in the input folder
+    for tsv in in_dir.glob('*.tsv'):
+        print(tsv)
+        analyze_tsv_sentence(tsv,
+                             out_dir,
+                             format=format,
+                             write_all=write_all,
+                             align_leafs=align_leafs,
+                             draw_square=draw_square,
+                             font=font)
 
-        # analyse
-        tree, version_trees, rules = analyze_constituency(content)
-        if align_leafs:
-            from_roof = tree.height() * 25
-        else:
-            from_roof = None
-
-        # write rules
-        Path(out_dir / f'{csv.stem}_rules.txt').write_text(rules, encoding='utf-8-sig')
-
-        # write others
-        if format == 'png':
-            tree.build_png(Path(out_dir / f'{csv.stem}.png'),
-                           from_roof=from_roof,
+    for xlsx in in_dir.glob('*.xlsx'):
+        print(xlsx)
+        analyze_excel_file(xlsx,
+                           out_dir,
+                           header_sheets=header_sheets,
+                           format=format,
+                           write_all=write_all,
+                           align_leafs=align_leafs,
                            draw_square=draw_square,
                            font=font)
-            if write_all:
-                for num, v in enumerate(version_trees):
-                    v.build_png(Path(out_dir / f'{csv.stem}_version{num + 1}.png'),
-                                from_roof=from_roof,
-                                draw_square=draw_square,
-                                font=font)
-
-        elif format == 'pdf':
-            tree.build_pdf(Path(out_dir / f'{csv.stem}.pdf'),
-                           from_roof=from_roof,
-                           draw_square=draw_square,
-                           font=font)
-            if write_all:
-                for num, v in enumerate(version_trees):
-                    v.build_pdf(Path(out_dir / f'{csv.stem}_version{num + 1}.pdf'),
-                                from_roof=from_roof,
-                                draw_square=draw_square,
-                                font=font)
-
-        elif format == 'svg':
-            Path(out_dir / f'{csv.stem}.svg').write_text(tree.build_svg(font=font), encoding='utf-8-sig')
-            if write_all:
-                for num, v in enumerate(version_trees):
-                    Path(out_dir / f'{csv.stem}_version{num + 1}.svg')\
-                        .write_text(v.build_svg(font=font), encoding='utf-8-sig')
-
-        elif format == 'latex':
-            Path(out_dir / f'{csv.stem}.tex').write_text(tree.gen_latex(from_roof=from_roof, draw_square=draw_square))
-            if write_all:
-                for num, v in enumerate(version_trees):
-                    Path(out_dir / f'{csv.stem}_version{num + 1}.tex')\
-                        .write_text(v.gen_latex(from_roof=from_roof, draw_square=draw_square), encoding='utf-8-sig')
-
-        elif format == 'mshang':
-            mshang = generate_mshang_link(tree)
-            if write_all:
-                mshang += '\n\nextra trees:\n'
-                mshang += '\n\n'.join([generate_mshang_link(t) for t in version_trees])
-            Path(out_dir / f'{csv.stem}_mshang.txt').write_text(mshang, encoding='utf-8-sig')
-
-        else:
-            raise SyntaxError('allowed formats are: "png" "pdf" "svg", "latex" and "mshang"')
 
 
-def analyze_constituency(raw_content):
+def analyze_excel_file(filename, out_dir, header_sheets=0, format='png', write_all=False, align_leafs=True, draw_square=False, font=None):
+    filename, out_dir = Path(filename), Path(out_dir)
+
+    # create and / or empty output folder
+    if not out_dir.is_dir():
+        out_dir.mkdir(exist_ok=True)
+    out_dir = out_dir / filename.stem
+    out_dir.mkdir(exist_ok=True)
+    for f in out_dir.glob('*.*'):
+        f.unlink()
+
+    tmp_dir = TempDir(basedir=out_dir)
+
+    # write all sheets to temp tsv files
+    workbook = xlrd.open_workbook(filename)
+    sheets = workbook.sheet_names()[header_sheets:]
+    for s in sheets:
+        sheet = workbook.sheet_by_name(s)
+        tsv = Path(tmp_dir.name) / f'{s}.tsv'
+        with tsv.open('w') as w:
+            writer = csv.writer(w, delimiter='\t')
+            for rownum in range(sheet.nrows):
+                writer.writerow(sheet.row_values(rownum))
+
+    # process all tsv in the input folder
+    for tsv in Path(tmp_dir.name).glob('*.tsv'):
+        print('\t', tsv.stem)
+        analyze_tsv_sentence(tsv,
+                             out_dir=out_dir,
+                             format=format,
+                             write_all=write_all,
+                             align_leafs=align_leafs,
+                             draw_square=draw_square,
+                             font=font)
+
+
+def analyze_tsv_sentence(filename, out_dir, format='png', write_all=False, align_leafs=True, draw_square=False, font=None):
+    # read the tsv file in a single block
+    content = filename.read_text(encoding='utf-8-sig')
+
+    # analyse
+    tree, version_trees, rules = generate_analysis(content)
+    if align_leafs:
+        from_roof = tree.height() * 25
+    else:
+        from_roof = None
+
+    # write rules
+    Path(out_dir / f'{filename.stem}_rules.txt').write_text(rules, encoding='utf-8-sig')
+
+    # write others
+    if format == 'png':
+        tree.build_png(Path(out_dir / f'{filename.stem}.png'),
+                       from_roof=from_roof,
+                       draw_square=draw_square,
+                       font=font)
+        if write_all:
+            for num, v in enumerate(version_trees):
+                v.build_png(Path(out_dir / f'{filename.stem}_version{num + 1}.png'),
+                            from_roof=from_roof,
+                            draw_square=draw_square,
+                            font=font)
+
+    elif format == 'pdf':
+        tree.build_pdf(Path(out_dir / f'{filename.stem}.pdf'),
+                       from_roof=from_roof,
+                       draw_square=draw_square,
+                       font=font)
+        if write_all:
+            for num, v in enumerate(version_trees):
+                v.build_pdf(Path(out_dir / f'{filename.stem}_version{num + 1}.pdf'),
+                            from_roof=from_roof,
+                            draw_square=draw_square,
+                            font=font)
+
+    elif format == 'svg':
+        Path(out_dir / f'{filename.stem}.svg').write_text(tree.build_svg(font=font),
+                                                          encoding='utf-8-sig')
+        if write_all:
+            for num, v in enumerate(version_trees):
+                Path(out_dir / f'{filename.stem}_version{num + 1}.svg').write_text(v.build_svg(font=font),
+                                                                                   encoding='utf-8-sig')
+
+    elif format == 'latex':
+        Path(out_dir / f'{filename.stem}.tex').write_text(tree.gen_latex(from_roof=from_roof,
+                                                                         draw_square=draw_square,
+                                                                         font=font))
+        if write_all:
+            for num, v in enumerate(version_trees):
+                Path(out_dir / f'{filename.stem}_version{num + 1}.tex')\
+                    .write_text(v.gen_latex(from_roof=from_roof,
+                                            draw_square=draw_square,
+                                            font=font),
+                                encoding='utf-8-sig')
+
+    elif format == 'mshang':
+        mshang = generate_mshang_link(tree)
+        if write_all:
+            mshang += '\n\nextra trees:\n'
+            mshang += '\n\n'.join([generate_mshang_link(t) for t in version_trees])
+        Path(out_dir / f'{filename.stem}_mshang.txt').write_text(mshang, encoding='utf-8-sig')
+
+    else:
+        raise SyntaxError('allowed formats are: "png" "pdf" "svg", "latex" and "mshang"')
+
+
+def generate_analysis(raw_content):
     rows = list(csv.reader(raw_content.split('\n'), delimiter='\t'))
     rows = strip_empty_rows(rows)
     raw_tree, raw_versions = parse_rows(rows)
@@ -234,8 +303,10 @@ def parse_rows(rows):
         if 'W' == row[0]:
             w = num
 
-    assert p != -1 and w != -1  # ensure we have the POS and Words lines
+    assert p != -1 and w != -1, "The required P and W line markers aren't found"
 
+    assert len([r for r in rows[p] if r]) == len([r for r in rows[w] if r]) == len(rows[p]) == len(rows[w]), \
+        'There is a problem on the "P" and "W" lines. maybe they are not correctly placed'
     # delete 1st column
     rows = [row[1:] for row in rows]
 

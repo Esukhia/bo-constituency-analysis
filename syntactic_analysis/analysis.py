@@ -68,7 +68,7 @@ def analyze_excel_file(filename, out_dir, header_sheets=0, format='png', write_a
                 writer.writerow(sheet.row_values(rownum))
 
     # process all tsv in the input folder
-    for tsv in Path(tmp_dir.name).glob('*.tsv'):
+    for tsv in sorted(Path(tmp_dir.name).glob('*.tsv')):
         print('\t', tsv.stem)
         analyze_tsv_sentence(tsv,
                              out_dir=out_dir,

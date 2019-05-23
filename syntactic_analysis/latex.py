@@ -32,7 +32,7 @@ class LatexMkBuilder(object):
     @data('source')
     def build_pdf(self, source, texinputs=[]):
         if platform.system() == 'Darwin':
-            texinputs = Path('Library/TeX/texbin/')
+            texinputs = 'Library/TeX/texbin/'
         elif platform.system() == 'Windows':
             texinputs = []
         with TempDir() as tmpdir,\

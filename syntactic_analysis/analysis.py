@@ -87,6 +87,9 @@ def analyze_tsv_sentence(filename, out_dir, format='png', write_all=False, align
     tree, version_trees, rules = generate_analysis(content)
     if align_leafs:
         from_roof = tree.height() * 25
+        # add a bit
+        if tree.height() >= 8:
+            from_roof += 25
     else:
         from_roof = None
 

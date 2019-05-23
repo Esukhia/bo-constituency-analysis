@@ -54,7 +54,7 @@ class LatexMkBuilder(object):
             try:
                 subprocess.check_call(args,
                                       cwd=tmpdir,
-                                      env=newenv,
+                                      #env=newenv,
                                       stdin=open(os.devnull, 'r'),
                                       stdout=open(os.devnull, 'w'),
                                       stderr=open(os.devnull, 'w'), )

@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 import platform
 import subprocess
 from subprocess import CalledProcessError
@@ -31,7 +32,7 @@ class LatexMkBuilder(object):
     @data('source')
     def build_pdf(self, source, texinputs=[]):
         if platform.system() == 'Darwin':
-            texinputs = ['Library', 'TeX', 'texbin']
+            texinputs = Path('Library/TeX/texbin/')
         elif platform.system() == 'Windows':
             texinputs = []
         with TempDir() as tmpdir,\
@@ -48,7 +49,7 @@ class LatexMkBuilder(object):
 
             # create environment
             newenv = os.environ.copy()
-            newenv['TEXINPUTS'] = os.pathsep.join(texinputs) + os.pathsep
+            newenv['TEXINPUTS'] = str(texinputs)
 
             try:
                 subprocess.check_call(args,

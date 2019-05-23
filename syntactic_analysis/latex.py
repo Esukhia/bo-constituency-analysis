@@ -1,4 +1,5 @@
 import os
+import platform
 import subprocess
 from subprocess import CalledProcessError
 import re
@@ -29,6 +30,10 @@ class LatexMkBuilder(object):
 
     @data('source')
     def build_pdf(self, source, texinputs=[]):
+        if platform.system() == 'Darwin':
+            texinputs = ['Library', 'TeX', 'texbin']
+        elif platform.system() == 'Windows':
+            texinputs = []
         with TempDir() as tmpdir,\
                 source.temp_saved(suffix='.latex', dir=tmpdir) as tmp:
 

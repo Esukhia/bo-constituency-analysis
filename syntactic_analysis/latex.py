@@ -31,10 +31,7 @@ class LatexMkBuilder(object):
 
     @data('source')
     def build_pdf(self, source, texinputs=[]):
-        if platform.system() == 'Darwin':
-            texinputs = ['Library/TeX/texbin/']
-        elif platform.system() == 'Windows':
-            texinputs = []
+        texinputs.append(bytes.decode(subprocess.check_output(['which', 'xelatex'])).strip())
         with TempDir() as tmpdir,\
                 source.temp_saved(suffix='.latex', dir=tmpdir) as tmp:
 

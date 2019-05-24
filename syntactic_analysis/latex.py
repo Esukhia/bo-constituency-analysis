@@ -32,7 +32,7 @@ class LatexMkBuilder(object):
     @data('source')
     def build_pdf(self, source, texinputs=[]):
         if platform.system() == 'Darwin':
-            texinputs = 'Library/TeX/texbin/'
+            texinputs = ['Library/TeX/texbin/']
         elif platform.system() == 'Windows':
             texinputs = []
         with TempDir() as tmpdir,\
@@ -49,12 +49,12 @@ class LatexMkBuilder(object):
 
             # create environment
             newenv = os.environ.copy()
-            newenv['TEXINPUTS'] = str(texinputs)
+            newenv['TEXINPUTS'] = os.pathsep.join(texinputs) + os.pathsep
 
             try:
                 subprocess.check_call(args,
                                       cwd=tmpdir,
-                                      #env=newenv,
+                                      env=newenv,
                                       stdin=open(os.devnull, 'r'),
                                       stdout=open(os.devnull, 'w'),
                                       stderr=open(os.devnull, 'w'), )

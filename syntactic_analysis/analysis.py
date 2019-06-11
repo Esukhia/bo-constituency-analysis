@@ -13,6 +13,19 @@ from nltk.treeprettyprinter import TreePrettyPrinter
 from .latex import LatexMkBuilder
 
 
+def parse_tagset():
+    tagset = {}
+    lines = Path(Path(__file__).parent / 'tagset.txt').read_text(encoding='utf-8-sig').strip().split('\n')
+    lines = [l for l in lines if l.strip() and not l.startswith('#')]
+    for line in lines:
+        ud, tib = line.split('-')
+        tagset[ud] = tib
+    return tagset
+
+
+tagset = parse_tagset()
+
+
 def analyze_constituency(in_dir, out_dir, format='png', write_all=False, align_leafs=True, draw_square=False, font=None, header_sheets=0):
     # ensure the in and out folders exist
     if not in_dir.is_dir():
@@ -314,7 +327,19 @@ def parse_rows(rows):
     rows = [row[1:] for row in rows]
 
     # rows belonging to: the tree, the versions of the sentence
-    return rows[:p + 1], rows[w:]
+    raw_tree, raw_versions = rows[:p + 1], rows[w:]
+    raw_tree = normalize_raw_tree(raw_tree)
+    return raw_tree, raw_versions
+
+
+def normalize_raw_tree(raw_tree):
+    for n, row in enumerate(raw_tree):
+        for m, el in enumerate(row):
+            for ud, tib in tagset.items():
+                if ud in el:
+                    raw_tree[n][m] = el.replace(ud, tib)
+
+    return raw_tree
 
 
 class BoTreePrettyPrinter(TreePrettyPrinter):

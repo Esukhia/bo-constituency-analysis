@@ -1,0 +1,33 @@
+# WARNING: the replacement is done from top to bottom, so always put tags that contain other tags before the contained tag
+# Do: AUXP -> AUX  Don't: AUX -> AUXP
+
+# format: <UD>-<Tibetan>
+# empty lines are allowed. lines starting with "#" are comments
+
+# UD tagset
+ADJ-རྒྱན་ཚིག
+ADP-སྦྱོར་ཚིག
+ADV-བསྣན་ཚིག
+AUX-བྱ་བའི་ཚིག་གྲོགས།
+CCONJ-ལྟོས་མེད་སྦྲེལ་ཚིག
+DET-བརྣན་ཚིག
+INTJ-འབོད་ཚིག
+NOUN-མིང་ཚིག
+NUM-གྲངས་ཚིག
+PART-གྲོགས་ཚིག
+PRON-ཚབ་ཚིག
+PROPN-ཁྱད་མིང་།
+PUNCT-ཚེག་ཤད།
+SCONJ-ལྟོས་བཅས་འབྲེལ་ཚིག
+SYM-མཚོན་རྟགས།
+VERB-བྱ་ཚིག
+X-གཞན།
+
+# Syntagm-level tags
+PP-སྦྱོར་ཚོགས།
+VP-བྱ་ཚོགས།
+NP-མིང་ཚོགས།
+AuxP-བྱ་གྲོགས་ཚོགས།
+S'-ཚིག་གྲུབ་ཚོགས།
+SconjP-སྦྲེལ་ཚོགས།
+S-ཚིག་གྲུབ།

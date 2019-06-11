@@ -66,10 +66,7 @@ class LatexBuildError(Exception):
 
     # the binary log is probably latin1 or utf8?
     # utf8 throws errors occasionally, so we try with latin1
-    # and ignore invalid chars
-    LATEX_MESSAGE_ENCODING = 'latin1'
-    LATEX_ERR_RE = re.compile(r'(?P<filename>([a-zA-Z]:)?[^:]+):(?P<line>[0-9]+):'
-                              r'\s*(?P<error>.*)')
+    # and
 
     def __init__(self, logfn=None):
         if os.path.exists(logfn):

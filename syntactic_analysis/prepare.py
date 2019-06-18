@@ -4,13 +4,11 @@ import csv
 from pybo import BoPipeline, BoTokenizer
 import xlsxwriter
 
-from .textunits import sentencify
-
 
 tok = BoTokenizer('GMD')
 pos_eqvl = {'NUM': 'གྲངས་ཚིག', 'punct': 'རྟགས་ཤད།', 'DET': 'བརྣན་ཚིག', 'ADP': 'སྦྱོར་ཚིག', 'syl': '???', 'num': 'གྲངས་ཚིག',
             'VERB': 'བྱ་ཚིག', 'PART': 'གྲོགས་ཚིག', 'ADV': 'བསྣན་ཚིག', 'OOV': '???', 'SCONJ': 'ལྟོས་བཅས་སྦྲེལ་ཚིག', 'NOUN': 'མིང་ཚིག',
-            'ADJ': 'རྒྱན་ཚིག', 'OTHER': '???', 'PROPN': 'སྦྱར་མིང་།', 'PRON': 'ཚབ་ཚིག'}
+            'ADJ': 'རྒྱན་ཚིག', 'OTHER': '???', 'PROPN': 'སྦྱར་མིང་།', 'PRON': 'ཚབ་ཚིག', 'non-bo': 'གཞན།'}
 
 
 def tokenize(string):
@@ -50,7 +48,8 @@ def extract_words_n_pos(sent):
     words, pos = ['W'], ['P']
     for token in sent[1]:
         words.append(token.content)
-        pos.append(pos_eqvl[token.pos])
+        pos.append(token.pos)
+        # pos.append(pos_eqvl[token.pos])
 
     return words, pos
 
@@ -88,4 +87,6 @@ def prepare_file(in_file, out_dir, xlsx=True):
 
 
 if __name__ == '__main__':
-    prepare_file('../བུ་ཡུག་རྩུབ་ཀྱི་བྱམས་བརྩེ།.txt', '../input')
+    in_path = Path('../input')
+    for f in in_path.glob('*.txt'):
+        prepare_file(f, '../input')

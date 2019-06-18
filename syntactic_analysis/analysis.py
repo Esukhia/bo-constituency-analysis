@@ -26,7 +26,7 @@ def parse_tagset():
 tagset = parse_tagset()
 
 
-def analyze_constituency(in_dir, out_dir, format='png', write_all=False, align_leafs=True, draw_square=False, font=None, header_sheets=0):
+def analyze_constituency(in_dir, out_dir, format='png', write_all=False, align_leafs=True, draw_square=False, font=None, header_sheets=0, translate_tree=True):
     # ensure the in and out folders exist
     if not in_dir.is_dir():
         in_dir.mkdir(exist_ok=True)
@@ -42,7 +42,8 @@ def analyze_constituency(in_dir, out_dir, format='png', write_all=False, align_l
                              write_all=write_all,
                              align_leafs=align_leafs,
                              draw_square=draw_square,
-                             font=font)
+                             font=font,
+                             translate_tree=translate_tree)
 
     for xlsx in in_dir.glob('*.xlsx'):
         print(xlsx)
@@ -53,10 +54,11 @@ def analyze_constituency(in_dir, out_dir, format='png', write_all=False, align_l
                            write_all=write_all,
                            align_leafs=align_leafs,
                            draw_square=draw_square,
-                           font=font)
+                           font=font,
+                           translate_tree=translate_tree)
 
 
-def analyze_excel_file(filename, out_dir, header_sheets=0, format='png', write_all=False, align_leafs=True, draw_square=False, font=None):
+def analyze_excel_file(filename, out_dir, header_sheets=0, format='png', write_all=False, align_leafs=True, draw_square=False, font=None, translate_tree=True):
     filename, out_dir = Path(filename), Path(out_dir)
 
     # create and / or empty output folder
@@ -89,15 +91,16 @@ def analyze_excel_file(filename, out_dir, header_sheets=0, format='png', write_a
                              write_all=write_all,
                              align_leafs=align_leafs,
                              draw_square=draw_square,
-                             font=font)
+                             font=font,
+                             translate_tree=translate_tree)
 
 
-def analyze_tsv_sentence(filename, out_dir, format='png', write_all=False, align_leafs=True, draw_square=False, font=None):
+def analyze_tsv_sentence(filename, out_dir, format='png', write_all=False, align_leafs=True, draw_square=False, font=None, translate_tree=True):
     # read the tsv file in a single block
     content = filename.read_text(encoding='utf-8-sig')
 
     # analyse
-    tree, version_trees, rules = generate_analysis(content)
+    tree, version_trees, rules = generate_analysis(content, translate_tree=translate_tree)
     if align_leafs:
         from_roof = tree.height() * 25
         # add a bit
@@ -165,10 +168,10 @@ def analyze_tsv_sentence(filename, out_dir, format='png', write_all=False, align
         raise SyntaxError('allowed formats are: "png" "pdf" "svg", "latex" and "mshang"')
 
 
-def generate_analysis(raw_content):
+def generate_analysis(raw_content, translate_tree=True):
     rows = list(csv.reader(raw_content.split('\n'), delimiter='\t'))
     rows = strip_empty_rows(rows)
-    raw_tree, raw_versions = parse_rows(rows)
+    raw_tree, raw_versions = parse_rows(rows, translate_tree=translate_tree)
     tree = parse_tree(raw_tree, raw_versions[0])
     version_trees = generate_subtrees(raw_versions, tree)
     rules = [str(r) for r in tree.productions() if "'" not in str(r)]
@@ -190,10 +193,11 @@ def generate_analysis(raw_content):
     return tree, version_trees, rules
 
 
-def generate_trees(raw_content):
+# unused
+def generate_trees(raw_content, translate_tree=True):
     rows = list(csv.reader(raw_content.split('\n'), delimiter='\t'))
     rows = strip_empty_rows(rows)
-    raw_tree, raw_versions = parse_rows(rows)
+    raw_tree, raw_versions = parse_rows(rows, translate_tree=translate_tree)
     tree = parse_tree(raw_tree, raw_versions[0])
     version_trees = generate_subtrees(raw_versions, tree)
     return tree, version_trees
@@ -310,7 +314,7 @@ def check_tree(tree):
     return [', '.join(tree[e]) for e in errors]
 
 
-def parse_rows(rows):
+def parse_rows(rows, translate_tree=True):
     # indentify POS and Words rows
     p, w = -1, -1
     for num, row in enumerate(rows):
@@ -328,7 +332,8 @@ def parse_rows(rows):
 
     # rows belonging to: the tree, the versions of the sentence
     raw_tree, raw_versions = rows[:p + 1], rows[w:]
-    raw_tree = normalize_raw_tree(raw_tree)
+    if translate_tree:
+        raw_tree = normalize_raw_tree(raw_tree)
     return raw_tree, raw_versions
 
 
@@ -471,6 +476,7 @@ class BoTree(Tree):
 \\voffset=-1in
 \\setbox0\hbox{
 \\begin{tikzpicture}
+\\tikzset{every tree node/.style={align=center,anchor=north}}
 """
         footer = """
 \\end{tikzpicture}

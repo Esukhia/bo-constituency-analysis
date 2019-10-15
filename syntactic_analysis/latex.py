@@ -27,38 +27,40 @@ class LatexMkBuilder(object):
 
     def __init__(self):
         # The path to the ``xelatex`` binary (will be looked up on ``$PATH``).
-        self.xelatex = 'xelatex'
+        self.xelatex = "xelatex"
 
-    @data('source')
+    @data("source")
     def build_pdf(self, source, texinputs=[]):
-        texinputs.append(bytes.decode(subprocess.check_output(['which', 'xelatex'])).strip())
-        with TempDir() as tmpdir,\
-                source.temp_saved(suffix='.latex', dir=tmpdir) as tmp:
+        texinputs.append(
+            bytes.decode(subprocess.check_output(["which", "xelatex"])).strip()
+        )
+        with TempDir() as tmpdir, source.temp_saved(suffix=".latex", dir=tmpdir) as tmp:
 
             # close temp file, so other processes can access it also on Windows
             tmp.close()
 
             base_fn = os.path.splitext(tmp.name)[0]
-            output_fn = base_fn + '.pdf'
+            output_fn = base_fn + ".pdf"
 
-            args = [self.xelatex,
-                    tmp.name, ]
+            args = [self.xelatex, tmp.name]
 
             # create environment
             newenv = os.environ.copy()
-            newenv['TEXINPUTS'] = os.pathsep.join(texinputs) + os.pathsep
+            newenv["TEXINPUTS"] = os.pathsep.join(texinputs) + os.pathsep
 
             try:
-                subprocess.check_call(args,
-                                      cwd=tmpdir,
-                                      env=newenv,
-                                      stdin=open(os.devnull, 'r'),
-                                      stdout=open(os.devnull, 'w'),
-                                      stderr=open(os.devnull, 'w'), )
+                subprocess.check_call(
+                    args,
+                    cwd=tmpdir,
+                    env=newenv,
+                    stdin=open(os.devnull, "r"),
+                    stdout=open(os.devnull, "w"),
+                    stderr=open(os.devnull, "w"),
+                )
             except CalledProcessError as e:
-                raise_from(LatexBuildError(base_fn + '.log'), e)
+                raise_from(LatexBuildError(base_fn + ".log"), e)
 
-            return I(open(output_fn, 'rb').read(), encoding=None)
+            return I(open(output_fn, "rb").read(), encoding=None)
 
 
 class LatexBuildError(Exception):
@@ -70,8 +72,8 @@ class LatexBuildError(Exception):
 
     def __init__(self, logfn=None):
         if os.path.exists(logfn):
-            binlog = open(logfn, 'rb').read()
-            self.log = binlog.decode(self.LATEX_MESSAGE_ENCODING, 'ignore')
+            binlog = open(logfn, "rb").read()
+            self.log = binlog.decode(self.LATEX_MESSAGE_ENCODING, "ignore")
         else:
             self.log = None
 
@@ -108,9 +110,9 @@ class LatexBuildError(Exception):
             m = self.LATEX_ERR_RE.match(line)
             if m:
                 err = m.groupdict().copy()
-                err['context'] = lines[n:n + context_size]
+                err["context"] = lines[n : n + context_size]
                 try:
-                    err['line'] = int(err['line'])
+                    err["line"] = int(err["line"])
                 except TypeError:
                     pass  # ignore invalid int conversion
                 errors.append(err)

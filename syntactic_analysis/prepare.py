@@ -1,14 +1,30 @@
 from pathlib import Path
 import csv
 
-from pybo import BoPipeline, BoTokenizer
+from botok import Text, WordTokenizer
 import xlsxwriter
 
 
-tok = BoTokenizer('GMD')
-pos_eqvl = {'NUM': 'གྲངས་ཚིག', 'punct': 'རྟགས་ཤད།', 'DET': 'བརྣན་ཚིག', 'ADP': 'སྦྱོར་ཚིག', 'syl': '???', 'num': 'གྲངས་ཚིག',
-            'VERB': 'བྱ་ཚིག', 'PART': 'གྲོགས་ཚིག', 'ADV': 'བསྣན་ཚིག', 'OOV': '???', 'SCONJ': 'ལྟོས་བཅས་སྦྲེལ་ཚིག', 'NOUN': 'མིང་ཚིག',
-            'ADJ': 'རྒྱན་ཚིག', 'OTHER': '???', 'PROPN': 'སྦྱར་མིང་།', 'PRON': 'ཚབ་ཚིག', 'non-bo': 'གཞན།'}
+# tok = BoTokenizer('GMD')
+pos_eqvl = {
+    "NUM": "གྲངས་ཚིག",
+    "punct": "རྟགས་ཤད།",
+    "DET": "བརྣན་ཚིག",
+    "ADP": "སྦྱོར་ཚིག",
+    "syl": "???",
+    "num": "གྲངས་ཚིག",
+    "VERB": "བྱ་ཚིག",
+    "PART": "གྲོགས་ཚིག",
+    "ADV": "བསྣན་ཚིག",
+    "OOV": "???",
+    "SCONJ": "ལྟོས་བཅས་སྦྲེལ་ཚིག",
+    "NOUN": "མིང་ཚིག",
+    "ADJ": "རྒྱན་ཚིག",
+    "OTHER": "???",
+    "PROPN": "སྦྱར་མིང་།",
+    "PRON": "ཚབ་ཚིག",
+    "non-bo": "གཞན།",
+}
 
 
 def tokenize(string):
@@ -17,7 +33,7 @@ def tokenize(string):
 
 def tokenize_lines(string):
     out = []
-    for line in string.split('\n'):
+    for line in string.split("\n"):
         out.append(tok.tokenize(line))
     return out
 
@@ -37,15 +53,15 @@ def prepare_analysis(sentences):
 def generate_sheet(sent, lines_above, amount_sentence):
     sheet = []
     words, pos = extract_words_n_pos(sent)
-    sheet.extend([[''] * len(words)] * lines_above)
+    sheet.extend([[""] * len(words)] * lines_above)
     sheet.append(pos)
     sheet.append(words)
-    sheet.extend([[''] + words[1:]] * amount_sentence)
+    sheet.extend([[""] + words[1:]] * amount_sentence)
     return sheet
 
 
 def extract_words_n_pos(sent):
-    words, pos = ['W'], ['P']
+    words, pos = ["W"], ["P"]
     for token in sent[1]:
         words.append(token.content)
         pos.append(token.pos)
@@ -61,15 +77,12 @@ def prepare_file(in_file, out_dir, xlsx=True):
     #                       sentencify,
     #                       prepare_analysis)
 
-    pipeline = BoPipeline('dummy',
-                          tokenize_lines,
-                          prepare_sentences,
-                          prepare_analysis)
+    pipeline = BoPipeline("dummy", tokenize_lines, prepare_sentences, prepare_analysis)
 
-    content = in_file.read_text(encoding='utf-8-sig')
+    content = in_file.read_text(encoding="utf-8-sig")
     sheets = pipeline.pipe_str(content)
     if xlsx:
-        workbook = xlsxwriter.Workbook(in_file.stem + '.xlsx')
+        workbook = xlsxwriter.Workbook(in_file.stem + ".xlsx")
         for num, sheet in enumerate(sheets):
             worksheet = workbook.add_worksheet(str(num))
             for r, row in enumerate(sheet):
@@ -79,14 +92,14 @@ def prepare_file(in_file, out_dir, xlsx=True):
 
     else:
         for num, sheet in enumerate(sheets):
-            out_file = out_dir / f'{in_file.stem}_{num + 1}.csv'
-            with out_file.open('w') as csvfile:
+            out_file = out_dir / f"{in_file.stem}_{num + 1}.csv"
+            with out_file.open("w") as csvfile:
                 writer = csv.writer(csvfile)
                 for line in sheet:
                     writer.writerow(line)
 
 
-if __name__ == '__main__':
-    in_path = Path('../input')
-    for f in in_path.glob('*.txt'):
-        prepare_file(f, '../input')
+if __name__ == "__main__":
+    in_path = Path("../input")
+    for f in in_path.glob("*.txt"):
+        prepare_file(f, "../input")

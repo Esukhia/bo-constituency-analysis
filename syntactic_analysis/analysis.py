@@ -14,19 +14,34 @@ from .latex import LatexMkBuilder
 
 
 def parse_tagset():
-    tagset = {}
-    lines = Path(Path(__file__).parent / 'tagset.txt').read_text(encoding='utf-8-sig').strip().split('\n')
-    lines = [l for l in lines if l.strip() and not l.startswith('#')]
+    tagset = []
+    lines = (
+        Path(Path(__file__).parent / "tagset.txt")
+        .read_text(encoding="utf-8-sig")
+        .strip()
+        .split("\n")
+    )
+    lines = [l for l in lines if l.strip() and not l.startswith("#")]
     for line in lines:
-        ud, tib = line.split('-')
-        tagset[ud] = tib
+        ud, tib = line.split("-")
+        tagset.append((ud, tib))
     return tagset
 
 
 tagset = parse_tagset()
 
 
-def analyze_constituency(in_dir, out_dir, format='png', write_all=False, align_leafs=True, draw_square=False, font=None, header_sheets=0, translate_tree=True):
+def analyze_constituency(
+    in_dir,
+    out_dir,
+    format="png",
+    write_all=False,
+    align_leafs=True,
+    draw_square=False,
+    font=None,
+    header_sheets=0,
+    translate_tree=True,
+):
     # ensure the in and out folders exist
     if not in_dir.is_dir():
         in_dir.mkdir(exist_ok=True)
@@ -34,31 +49,45 @@ def analyze_constituency(in_dir, out_dir, format='png', write_all=False, align_l
         out_dir.mkdir(exist_ok=True)
 
     # process all tsv in the input folder
-    for tsv in in_dir.glob('*.tsv'):
+    for tsv in in_dir.glob("*.tsv"):
         print(tsv)
-        analyze_tsv_sentence(tsv,
-                             out_dir,
-                             format=format,
-                             write_all=write_all,
-                             align_leafs=align_leafs,
-                             draw_square=draw_square,
-                             font=font,
-                             translate_tree=translate_tree)
+        analyze_tsv_sentence(
+            tsv,
+            out_dir,
+            format=format,
+            write_all=write_all,
+            align_leafs=align_leafs,
+            draw_square=draw_square,
+            font=font,
+            translate_tree=translate_tree,
+        )
 
-    for xlsx in in_dir.glob('*.xlsx'):
+    for xlsx in in_dir.glob("*.xlsx"):
         print(xlsx)
-        analyze_excel_file(xlsx,
-                           out_dir,
-                           header_sheets=header_sheets,
-                           format=format,
-                           write_all=write_all,
-                           align_leafs=align_leafs,
-                           draw_square=draw_square,
-                           font=font,
-                           translate_tree=translate_tree)
+        analyze_excel_file(
+            xlsx,
+            out_dir,
+            header_sheets=header_sheets,
+            format=format,
+            write_all=write_all,
+            align_leafs=align_leafs,
+            draw_square=draw_square,
+            font=font,
+            translate_tree=translate_tree,
+        )
 
 
-def analyze_excel_file(filename, out_dir, header_sheets=0, format='png', write_all=False, align_leafs=True, draw_square=False, font=None, translate_tree=True):
+def analyze_excel_file(
+    filename,
+    out_dir,
+    header_sheets=0,
+    format="png",
+    write_all=False,
+    align_leafs=True,
+    draw_square=False,
+    font=None,
+    translate_tree=True,
+):
     filename, out_dir = Path(filename), Path(out_dir)
 
     # create and / or empty output folder
@@ -66,7 +95,7 @@ def analyze_excel_file(filename, out_dir, header_sheets=0, format='png', write_a
         out_dir.mkdir(exist_ok=True)
     out_dir = out_dir / filename.stem
     out_dir.mkdir(exist_ok=True)
-    for f in out_dir.glob('*.*'):
+    for f in out_dir.glob("*.*"):
         f.unlink()
 
     tmp_dir = TempDir(basedir=out_dir)
@@ -76,31 +105,44 @@ def analyze_excel_file(filename, out_dir, header_sheets=0, format='png', write_a
     sheets = workbook.sheet_names()[header_sheets:]
     for s in sheets:
         sheet = workbook.sheet_by_name(s)
-        tsv = Path(tmp_dir.name) / f'{s}.tsv'
-        with tsv.open('w') as w:
-            writer = csv.writer(w, delimiter='\t')
+        tsv = Path(tmp_dir.name) / f"{s}.tsv"
+        with tsv.open("w") as w:
+            writer = csv.writer(w, delimiter="\t")
             for rownum in range(sheet.nrows):
                 writer.writerow(sheet.row_values(rownum))
 
     # process all tsv in the input folder
-    for tsv in sorted(Path(tmp_dir.name).glob('*.tsv')):
-        print('\t', tsv.stem)
-        analyze_tsv_sentence(tsv,
-                             out_dir=out_dir,
-                             format=format,
-                             write_all=write_all,
-                             align_leafs=align_leafs,
-                             draw_square=draw_square,
-                             font=font,
-                             translate_tree=translate_tree)
+    for tsv in sorted(Path(tmp_dir.name).glob("*.tsv")):
+        print("\t", tsv.stem)
+        analyze_tsv_sentence(
+            tsv,
+            out_dir=out_dir,
+            format=format,
+            write_all=write_all,
+            align_leafs=align_leafs,
+            draw_square=draw_square,
+            font=font,
+            translate_tree=translate_tree,
+        )
 
 
-def analyze_tsv_sentence(filename, out_dir, format='png', write_all=False, align_leafs=True, draw_square=False, font=None, translate_tree=True):
+def analyze_tsv_sentence(
+    filename,
+    out_dir,
+    format="png",
+    write_all=False,
+    align_leafs=True,
+    draw_square=False,
+    font=None,
+    translate_tree=True,
+):
     # read the tsv file in a single block
-    content = filename.read_text(encoding='utf-8-sig')
+    content = filename.read_text(encoding="utf-8-sig")
 
     # analyse
-    tree, version_trees, rules = generate_analysis(content, translate_tree=translate_tree)
+    tree, version_trees, rules = generate_analysis(
+        content, translate_tree=translate_tree
+    )
     if align_leafs:
         from_roof = tree.height() * 25
         # add a bit
@@ -110,66 +152,81 @@ def analyze_tsv_sentence(filename, out_dir, format='png', write_all=False, align
         from_roof = None
 
     # write rules
-    Path(out_dir / f'{filename.stem}_rules.txt').write_text(rules, encoding='utf-8-sig')
+    Path(out_dir / f"{filename.stem}_rules.txt").write_text(rules, encoding="utf-8-sig")
 
     # write others
-    if format == 'png':
-        tree.build_png(Path(out_dir / f'{filename.stem}.png'),
-                       from_roof=from_roof,
-                       draw_square=draw_square,
-                       font=font)
+    if format == "png":
+        tree.build_png(
+            Path(out_dir / f"{filename.stem}.png"),
+            from_roof=from_roof,
+            draw_square=draw_square,
+            font=font,
+        )
         if write_all:
             for num, v in enumerate(version_trees):
-                v.build_png(Path(out_dir / f'{filename.stem}_version{num + 1}.png'),
-                            from_roof=from_roof,
-                            draw_square=draw_square,
-                            font=font)
+                v.build_png(
+                    Path(out_dir / f"{filename.stem}_version{num + 1}.png"),
+                    from_roof=from_roof,
+                    draw_square=draw_square,
+                    font=font,
+                )
 
-    elif format == 'pdf':
-        tree.build_pdf(Path(out_dir / f'{filename.stem}.pdf'),
-                       from_roof=from_roof,
-                       draw_square=draw_square,
-                       font=font)
+    elif format == "pdf":
+        tree.build_pdf(
+            Path(out_dir / f"{filename.stem}.pdf"),
+            from_roof=from_roof,
+            draw_square=draw_square,
+            font=font,
+        )
         if write_all:
             for num, v in enumerate(version_trees):
-                v.build_pdf(Path(out_dir / f'{filename.stem}_version{num + 1}.pdf'),
-                            from_roof=from_roof,
-                            draw_square=draw_square,
-                            font=font)
+                v.build_pdf(
+                    Path(out_dir / f"{filename.stem}_version{num + 1}.pdf"),
+                    from_roof=from_roof,
+                    draw_square=draw_square,
+                    font=font,
+                )
 
-    elif format == 'svg':
-        Path(out_dir / f'{filename.stem}.svg').write_text(tree.build_svg(font=font),
-                                                          encoding='utf-8-sig')
+    elif format == "svg":
+        Path(out_dir / f"{filename.stem}.svg").write_text(
+            tree.build_svg(font=font), encoding="utf-8-sig"
+        )
         if write_all:
             for num, v in enumerate(version_trees):
-                Path(out_dir / f'{filename.stem}_version{num + 1}.svg').write_text(v.build_svg(font=font),
-                                                                                   encoding='utf-8-sig')
+                Path(out_dir / f"{filename.stem}_version{num + 1}.svg").write_text(
+                    v.build_svg(font=font), encoding="utf-8-sig"
+                )
 
-    elif format == 'latex':
-        Path(out_dir / f'{filename.stem}.tex').write_text(tree.gen_latex(from_roof=from_roof,
-                                                                         draw_square=draw_square,
-                                                                         font=font))
+    elif format == "latex":
+        Path(out_dir / f"{filename.stem}.tex").write_text(
+            tree.gen_latex(from_roof=from_roof, draw_square=draw_square, font=font)
+        )
         if write_all:
             for num, v in enumerate(version_trees):
-                Path(out_dir / f'{filename.stem}_version{num + 1}.tex')\
-                    .write_text(v.gen_latex(from_roof=from_roof,
-                                            draw_square=draw_square,
-                                            font=font),
-                                encoding='utf-8-sig')
+                Path(out_dir / f"{filename.stem}_version{num + 1}.tex").write_text(
+                    v.gen_latex(
+                        from_roof=from_roof, draw_square=draw_square, font=font
+                    ),
+                    encoding="utf-8-sig",
+                )
 
-    elif format == 'mshang':
+    elif format == "mshang":
         mshang = generate_mshang_link(tree)
         if write_all:
-            mshang += '\n\nextra trees:\n'
-            mshang += '\n\n'.join([generate_mshang_link(t) for t in version_trees])
-        Path(out_dir / f'{filename.stem}_mshang.txt').write_text(mshang, encoding='utf-8-sig')
+            mshang += "\n\nextra trees:\n"
+            mshang += "\n\n".join([generate_mshang_link(t) for t in version_trees])
+        Path(out_dir / f"{filename.stem}_mshang.txt").write_text(
+            mshang, encoding="utf-8-sig"
+        )
 
     else:
-        raise SyntaxError('allowed formats are: "png" "pdf" "svg", "latex" and "mshang"')
+        raise SyntaxError(
+            'allowed formats are: "png" "pdf" "svg", "latex" and "mshang"'
+        )
 
 
 def generate_analysis(raw_content, translate_tree=True):
-    rows = list(csv.reader(raw_content.split('\n'), delimiter='\t'))
+    rows = list(csv.reader(raw_content.split("\n"), delimiter="\t"))
     rows = strip_empty_rows(rows)
     raw_tree, raw_versions = parse_rows(rows, translate_tree=translate_tree)
     tree = parse_tree(raw_tree, raw_versions[0])
@@ -180,22 +237,26 @@ def generate_analysis(raw_content, translate_tree=True):
     for n, t in enumerate(version_trees):
         for rule in t.productions():
             str_rule = str(rule)
-            str_rule = str_rule.replace('--extra' + str(n + 1), '')
-            if "'" not in str_rule and str_rule not in rules and str_rule not in extra_rules:
+            str_rule = str_rule.replace("--extra" + str(n + 1), "")
+            if (
+                "'" not in str_rule
+                and str_rule not in rules
+                and str_rule not in extra_rules
+            ):
                 extra_rules.append(str_rule)
 
-    rules = '\n'.join(rules)
-    extra_rules = '\n'.join(extra_rules)
-    vocab = '\n'.join(vocab)
+    rules = "\n".join(rules)
+    extra_rules = "\n".join(extra_rules)
+    vocab = "\n".join(vocab)
 
-    rules = f'rules:\n{rules}\n\nextra rules:\n{extra_rules}\n\nvocab:\n{vocab}'
+    rules = f"rules:\n{rules}\n\nextra rules:\n{extra_rules}\n\nvocab:\n{vocab}"
 
     return tree, version_trees, rules
 
 
 # unused
 def generate_trees(raw_content, translate_tree=True):
-    rows = list(csv.reader(raw_content.split('\n'), delimiter='\t'))
+    rows = list(csv.reader(raw_content.split("\n"), delimiter="\t"))
     rows = strip_empty_rows(rows)
     raw_tree, raw_versions = parse_rows(rows, translate_tree=translate_tree)
     tree = parse_tree(raw_tree, raw_versions[0])
@@ -206,48 +267,53 @@ def generate_trees(raw_content, translate_tree=True):
 def parse_tree(raw_tree, words):
     sanity = check_tree(raw_tree[:-1])
     if sanity:
-        errors = '\n\t'.join(sanity)
-        raise SyntaxError(f'Errors in following rows:\n\t{errors}\n')
+        errors = "\n\t".join(sanity)
+        raise SyntaxError(f"Errors in following rows:\n\t{errors}\n")
 
-    tree = [[raw_tree[line][col] for line in range(len(raw_tree))] for col in range(len(raw_tree[0]))]
+    tree = [
+        [raw_tree[line][col] for line in range(len(raw_tree))]
+        for col in range(len(raw_tree[0]))
+    ]
     for num, col in enumerate(tree):
         new_line = [el for el in col if el]
         for mun, el in enumerate(new_line):
-            if ']' in el and mun < len(new_line) - 1:
-                count = el.count(']')
-                new_line[mun] = new_line[mun].replace(']', '')
-                new_line[mun + 1] += ']' * count
+            if "]" in el and mun < len(new_line) - 1:
+                count = el.count("]")
+                new_line[mun] = new_line[mun].replace("]", "")
+                new_line[mun + 1] += "]" * count
         new_line = [el for el in new_line if el]
         tree[num] = new_line
 
     # add words to tree
     for n, word in enumerate(words):
-        word = word.replace(' ', '_')
+        word = word.replace(" ", "_")
         pos = tree[n][-1]
-        if pos.endswith(']'):
-            count = pos.count(']')
-            pos = pos[:-count] + ' -' + word + ']' * count
+        if pos.endswith("]"):
+            count = pos.count("]")
+            pos = pos[:-count] + " -" + word + "]" * count
         else:
-            pos = pos + ' -' + word
+            pos = pos + " -" + word
 
         tree[n][-1] = pos
 
     # add boxes to final nodes for mshang
     for n, col in enumerate(tree):
         for m, cell in enumerate(col):
-            if not cell.startswith('['):
-                tree[n][m] = '[' + tree[n][m] + ']'
+            if not cell.startswith("["):
+                tree[n][m] = "[" + tree[n][m] + "]"
 
-    to_parse = ' '.join([' '.join(col) for col in tree]).replace('-', '')
-    tree = BoTree.fromstring(to_parse.replace('[', '(').replace(']', ')'))
+    to_parse = " ".join([" ".join(col) for col in tree]).replace("-", "")
+    tree = BoTree.fromstring(to_parse.replace("[", "(").replace("]", ")"))
 
     return tree
 
 
 def generate_mshang_link(tree):
-    str_tree = re.sub(r'\s+', ' ', str(tree).replace('\n', ''))
-    str_tree = str_tree.replace('(', '[').replace(')', ']')
-    return 'http://mshang.ca/syntree/?i=' + str_tree.replace('_', ' ').replace(' ', '%20')
+    str_tree = re.sub(r"\s+", " ", str(tree).replace("\n", ""))
+    str_tree = str_tree.replace("(", "[").replace(")", "]")
+    return "http://mshang.ca/syntree/?i=" + str_tree.replace("_", " ").replace(
+        " ", "%20"
+    )
 
 
 def generate_subtrees(simplified_sentences, full_tree):
@@ -255,7 +321,7 @@ def generate_subtrees(simplified_sentences, full_tree):
     subtrees = []
     for n, sent in enumerate(simplified_sentences):
         new_tree = parented_tree.copy(deep=True)
-        new_tree.set_label(f'{new_tree.label()}--extra{n}')
+        new_tree.set_label(f"{new_tree.label()}--extra{n}")
         # delete leafs
         to_del = list(reversed([num for num, word in enumerate(sent) if not word]))
         if not to_del:
@@ -263,7 +329,10 @@ def generate_subtrees(simplified_sentences, full_tree):
         for num in to_del:
             postn = new_tree.leaf_treeposition(num)
             # go up deleting nodes until there are left siblings (we are starting
-            while not (new_tree[postn[:-1]].left_sibling() or new_tree[postn[:-1]].right_sibling()):
+            while not (
+                new_tree[postn[:-1]].left_sibling()
+                or new_tree[postn[:-1]].right_sibling()
+            ):
                 postn = postn[:-1]
 
             del new_tree[postn[:-1]]
@@ -276,7 +345,7 @@ def generate_subtrees(simplified_sentences, full_tree):
 def strip_empty_rows(rows):
     i = 0
     while i < len(rows):
-        if not ''.join(rows[i]):
+        if not "".join(rows[i]):
             del rows[i]
         else:
             i += 1
@@ -289,71 +358,80 @@ def check_tree(tree):
     for num, row in enumerate(tree):
         state = None
         for cell in row:
-            if cell and cell != ']':
-                if not cell.startswith('['):
+            if cell and cell != "]":
+                if not cell.startswith("["):
                     errors.append(num)
-                if state and state != 'end':
+                if state and state != "end":
                     errors.append(num)
-                if ']' in cell:
-                    if cell.endswith(']'):
-                        state = 'end'
+                if "]" in cell:
+                    if cell.endswith("]"):
+                        state = "end"
                     else:
                         errors.append(num)
-                        state = 'begin'
+                        state = "begin"
                 else:
-                    state = 'begin'
-            elif cell == ']':
-                if not state == 'begin':
+                    state = "begin"
+            elif cell == "]":
+                if not state == "begin":
                     errors.append(num)
-                state = 'end'
-        if state != 'end':
+                state = "end"
+        if state != "end":
             errors.append(num)
 
     errors = sorted(list(set(errors)))
 
-    return [', '.join(tree[e]) for e in errors]
+    return [", ".join(tree[e]) for e in errors]
 
 
-def parse_rows(rows, translate_tree=True):
+def parse_rows(rows, translate_tree=None):
     # indentify POS and Words rows
     p, w = -1, -1
     for num, row in enumerate(rows):
-        if 'P' == row[0]:
+        if "P" == row[0]:
             p = num
-        if 'W' == row[0]:
+        if "W" == row[0]:
             w = num
 
     assert p != -1 and w != -1, "The required P and W line markers aren't found"
 
-    assert len([r for r in rows[p] if r]) == len([r for r in rows[w] if r]) == len(rows[p]) == len(rows[w]), \
-        'There is a problem on the "P" and "W" lines. maybe they are not correctly placed'
+    assert (
+        len([r for r in rows[p] if r])
+        == len([r for r in rows[w] if r])
+        == len(rows[p])
+        == len(rows[w])
+    ), 'There is a problem on the "P" and "W" lines. maybe they are not correctly placed'
     # delete 1st column
     rows = [row[1:] for row in rows]
 
     # rows belonging to: the tree, the versions of the sentence
-    raw_tree, raw_versions = rows[:p + 1], rows[w:]
+    raw_tree, raw_versions = rows[: p + 1], rows[w:]
     if translate_tree:
-        raw_tree = normalize_raw_tree(raw_tree)
+        raw_tree = normalize_raw_tree(raw_tree, mode=translate_tree)
     return raw_tree, raw_versions
 
 
-def normalize_raw_tree(raw_tree):
+def normalize_raw_tree(raw_tree, mode='en_bo'):
     for n, row in enumerate(raw_tree):
         for m, el in enumerate(row):
-            for ud, tib in tagset.items():
-                if ud in el:
-                    raw_tree[n][m] = el.replace(ud, tib)
+            for ud, tib in tagset:
+                if ud in raw_tree[n][m] or tib in raw_tree[n][m]:
+                    if mode == 'en_bo':
+                        raw_tree[n][m] = raw_tree[n][m].replace(ud, tib)
+                    elif mode == 'bo_en':
+                        raw_tree[n][m] = raw_tree[n][m].replace(tib, ud)
+                    else:
+                        raise SyntaxError('mode is either "en_bo" or "bo_en"')
 
     return raw_tree
 
 
 class BoTreePrettyPrinter(TreePrettyPrinter):
-    def svg(self, nodecolor='blue', leafcolor='red', funccolor='green', font=None):
+    def svg(self, nodecolor="blue", leafcolor="red", funccolor="green", font=None):
         """
         :return: SVG representation of a tree.
         """
         if not font:
-            font = 'Noto Sans Tibetan'
+            font = "Noto Sans Tibetan"
         fontsize = 12
         hscale = 40
         vscale = 25
@@ -423,10 +501,10 @@ class BoTreePrettyPrinter(TreePrettyPrinter):
             y = row * vscale + vstart
             if n in self.highlight:
                 color = nodecolor if isinstance(node, Tree) else leafcolor
-                if isinstance(node, Tree) and node.label().startswith('-'):
+                if isinstance(node, Tree) and node.label().startswith("-"):
                     color = funccolor
             else:
-                color = 'black'
+                color = "black"
             result += [
                 '\t<text style="text-anchor: middle; fill: %s; '
                 'font-size: %dpx; font-family: %s" x="%g" y="%g">%s</text>'
@@ -440,8 +518,8 @@ class BoTreePrettyPrinter(TreePrettyPrinter):
                 )
             ]
 
-        result += ['</svg>']
-        return '\n'.join(result)
+        result += ["</svg>"]
+        return "\n".join(result)
 
 
 class BoTree(Tree):
@@ -455,7 +533,7 @@ class BoTree(Tree):
 
     def gen_latex(self, from_roof=None, draw_square=False, font=None):
         qtree = self.pformat_latex_qtree()
-        qtree = re.sub(r'([^a-zA-Z\[\].\s\\_]+)', r'\\bo{\1}', qtree)
+        qtree = re.sub(r"([^a-zA-Z\[\].\s\\_]+)", r"\\bo{\1}", qtree)
         header1 = """\\documentclass{article}
 \\usepackage{polyglossia}
 \\usepackage{fontspec} 
@@ -494,14 +572,20 @@ edge from parent path={(\\tikzparentnode.south)
 -| (\\tikzchildnode)}}}"""
 
         if from_roof:
-            header2 += '\\tikzset{frontier/.style={distance from root=' + str(from_roof) + 'pt}}\n'
+            header2 += (
+                "\\tikzset{frontier/.style={distance from root="
+                + str(from_roof)
+                + "pt}}\n"
+            )
         if draw_square:
             header2 += square
         document = header1 + str(Path(__file__).parent) + header2 + qtree + footer
-        document = document.replace('\\', '\\')
+        document = document.replace("\\", "\\")
         return document
 
-    def build_pdf(self, filename, texinputs=[], from_roof=None, draw_square=False, font=None):
+    def build_pdf(
+        self, filename, texinputs=[], from_roof=None, draw_square=False, font=None
+    ):
         source = self.gen_latex(from_roof=from_roof, draw_square=draw_square, font=font)
         bld_cls = lambda: LatexMkBuilder()
         builder = bld_cls()
@@ -513,5 +597,5 @@ edge from parent path={(\\tikzparentnode.south)
         bld_cls = lambda: LatexMkBuilder()
         builder = bld_cls()
         pdf = builder.build_pdf(source, [])
-        png = convert_from_bytes(bytes(pdf), fmt='png')[0]
+        png = convert_from_bytes(bytes(pdf), fmt="png")[0]
         png.save(filename)
